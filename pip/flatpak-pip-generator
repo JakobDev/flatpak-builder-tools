@@ -59,6 +59,9 @@ parser.add_argument('--ignore-errors', action='store_true',
                     help='Ignore errors when downloading packages')
 opts = parser.parse_args()
 
+if opts.requirements_file and opts.pyproject_file:
+    exit('Can\'t use both requirements and pyproject files at the same time')
+
 if opts.pyproject_file:
     try:
         from tomllib import load as toml_load
