@@ -40,6 +40,13 @@ parser.add_argument('--build-isolation', action='store_true',
                         'Mostly useful on pip that does\'t '
                         'support the feature.'
                     ))
+parser.add_argument('--ignore-installed',
+                    type=lambda s: s.split(','),
+                    default='',
+                    help='Comma-separated list of package names for which pip '
+                    'should ignore already installed packages. Useful when '
+                    'the package is installed in the SDK but not in the '
+                    'runtime.')
 parser.add_argument('--checker-data', action='store_true',
                     help='Include x-checker-data in output for the "Flatpak External Data Checker"')
 parser.add_argument('--output', '-o',
@@ -48,7 +55,12 @@ parser.add_argument('--runtime',
                     help='Specify a flatpak to run pip inside of a sandbox, ensures python version compatibility')
 parser.add_argument('--yaml', action='store_true',
                     help='Use YAML as output format instead of JSON')
+parser.add_argument('--ignore-errors', action='store_true',
+                    help='Ignore errors when downloading packages')
 opts = parser.parse_args()
+
+if opts.requirements_file and opts.pyproject_file:
+    exit('Can\'t use both requirements and pyproject files at the same time')
 
 if opts.pyproject_file:
     try:
@@ -265,6 +277,9 @@ with tempfile.TemporaryDirectory(prefix=tempdir_prefix) as tempdir:
     except subprocess.CalledProcessError:
         print('Failed to download')
         print('Please fix the module manually in the generated file')
+        if not opts.ignore_errors:
+            print('Ignore the error by passing --ignore-errors')
+            raise
 
     if not opts.requirements_file:
         try:
@@ -432,6 +447,8 @@ for package in packages:
         '--prefix=${FLATPAK_DEST}',
         '"{}"'.format(name_for_pip)
     ]
+    if package.name in opts.ignore_installed:
+        pip_command.append('--ignore-installed')
     if not opts.build_isolation:
         pip_command.append('--no-build-isolation')
 
